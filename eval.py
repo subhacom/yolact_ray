@@ -16,6 +16,7 @@ import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 import argparse
 import time
+from datetime import datetime
 import random
 import cProfile
 import pickle
@@ -132,7 +133,7 @@ coco_cats = {} # Call prep_coco_cats to fill this
 coco_cats_inv = {}
 color_cache = defaultdict(lambda: {})
 
-def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, mask_alpha=0.45, fps_str=''):
+def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, mask_alpha=0.45, fps_str='', out_bboxes=None):
     """
     Note: If undo_transform=False then im_h and im_w are allowed to be None.
     """
@@ -234,6 +235,7 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
         return img_numpy
 
     if args.display_text or args.display_bboxes:
+        out_ = {}
         for j in reversed(range(num_dets_to_consider)):
             x1, y1, x2, y2 = boxes[j, :]
             color = get_color(j)
@@ -245,7 +247,7 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
             if args.display_text:
                 _class = cfg.dataset.class_names[classes[j]]
                 text_str = '%s: %.2f' % (_class, score) if args.display_scores else _class
-
+                out_[(x1, y1, x2, y2)] = classes[j]
                 font_face = cv2.FONT_HERSHEY_DUPLEX
                 font_scale = 0.6
                 font_thickness = 1
@@ -257,7 +259,7 @@ def prep_display(dets_out, img, h, w, undo_transform=True, class_color=False, ma
 
                 cv2.rectangle(img_numpy, (x1, y1), (x1 + text_w, y1 - text_h - 4), color, -1)
                 cv2.putText(img_numpy, text_str, text_pt, font_face, font_scale, text_color, font_thickness, cv2.LINE_AA)
-            
+        out_bboxes.append(out_)
     
     return img_numpy
 
@@ -706,10 +708,11 @@ def evalvideo(net:Yolact, path:str, out_path:str=None):
                 out = out[:-num_extra]
             return frames, out
 
-    def prep_frame(inp, fps_str):
+    def prep_frame(inp, fps_str, out_bboxes=None):
         with torch.no_grad():
             frame, preds = inp
-            return prep_display(preds, frame, None, None, undo_transform=False, class_color=True, fps_str=fps_str)
+            return prep_display(preds, frame, None, None, undo_transform=False, class_color=True, fps_str=fps_str,
+                                out_bboxes=out_bboxes)
 
     frame_buffer = Queue()
     video_fps = 0
@@ -724,7 +727,8 @@ def evalvideo(net:Yolact, path:str, out_path:str=None):
             last_time = None
             stabilizer_step = 0.0005
             progress_bar = ProgressBar(30, num_frames)
-
+            if out_path is None:
+                cv2.namedWindow(path, cv2.WINDOW_NORMAL)
             while running:
                 frame_time_start = time.time()
 
@@ -800,6 +804,7 @@ def evalvideo(net:Yolact, path:str, out_path:str=None):
     pool = ThreadPool(processes=len(sequence) + args.video_multiframe + 2)
     pool.apply_async(play_video)
     active_frames = [{'value': extract_frame(first_batch, i), 'idx': 0} for i in range(len(first_batch[0]))]
+    out_bboxes = []
 
     print()
     if out_path is None: print('Press Escape to close.')
@@ -824,6 +829,7 @@ def evalvideo(net:Yolact, path:str, out_path:str=None):
                     _args =  [frame['value']]
                     if frame['idx'] == 0:
                         _args.append(fps_str)
+                        _args.append(out_bboxes)
                     frame['value'] = pool.apply_async(sequence[frame['idx']], args=_args)
                 
                 # For each frame whose job was the last in the sequence (i.e. for all final outputs)
@@ -864,7 +870,12 @@ def evalvideo(net:Yolact, path:str, out_path:str=None):
 
     except KeyboardInterrupt:
         print('\nStopping...')
-    
+    fname = '{}.txt'.format(out_path if out_path is not None else path)
+    with open(fname, 'w') as fd:
+        print('\nWriting bounding boxes to file', fname)
+        for bbox_dict in out_bboxes:
+            line = ','.join([str(_class) + ',' + ','.join(map(str, bbox)) for bbox, _class in bbox_dict.items()])
+            fd.write(f'{line}\n')
     cleanup_and_exit()
 
 def evaluate(net:Yolact, dataset, train_mode=False):
@@ -1101,7 +1112,11 @@ if __name__ == '__main__':
 
         if args.cuda:
             net = net.cuda()
-
+        tstart = datetime.now()
         evaluate(net, dataset)
+        tend = datetime.now()
+        dt = tend - tstart
+        print('Time to evaluate:',
+             dt.seconds + dt.microseconds * 1e-6)
 
 
