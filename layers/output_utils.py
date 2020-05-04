@@ -7,9 +7,9 @@ import torch.nn.functional as F
 import numpy as np
 import cv2
 
-from data import cfg, mask_type, MEANS, STD, activation_func
-from utils.augmentations import Resize
-from utils import timer
+from ..data import cfg, mask_type, MEANS, STD, activation_func
+from ..utils.augmentations import Resize
+from ..utils import timer
 from .box_utils import crop, sanitize_coordinates
 
 def postprocess(det_output, w, h, batch_idx=0, interpolation_mode='bilinear',
@@ -19,8 +19,8 @@ def postprocess(det_output, w, h, batch_idx=0, interpolation_mode='bilinear',
     accounting for all the possible configuration settings.
 
     Args:
-        - det_output: The lost of dicts that Detect outputs.
-        - w: The real with of the image.
+        - det_output: The list of dicts that Detect outputs.
+        - w: The real width of the image.
         - h: The real height of the image.
         - batch_idx: If you have multiple images for this batch, the image's index in the batch.
         - interpolation_mode: Can be 'nearest' | 'area' | 'bilinear' (see torch.nn.functional.interpolate)
