@@ -1,8 +1,8 @@
-from data import COCODetection, get_label_map, MEANS, COLORS
+from data import COCODetection, get_label_map, COLORS
 from yolact import Yolact
-from utils.augmentations import BaseTransform, FastBaseTransform, Resize
+from utils.augmentations import BaseTransform, FastBaseTransform
 from utils.functions import MovingAverage, ProgressBar
-from layers.box_utils import jaccard, center_size, mask_iou
+from layers.box_utils import jaccard, mask_iou
 from utils import timer
 from utils.functions import SavePath
 from layers.output_utils import postprocess, undo_image_transformation
@@ -18,14 +18,12 @@ import argparse
 import time
 from datetime import datetime
 import random
-import cProfile
 import pickle
 import json
 import os
 from collections import defaultdict
 from pathlib import Path
 from collections import OrderedDict
-from PIL import Image
 
 import matplotlib.pyplot as plt
 import cv2
