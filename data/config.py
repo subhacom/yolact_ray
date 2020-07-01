@@ -1,3 +1,5 @@
+import os
+import yaml
 from ..backbone import ResNetBackbone, VGGBackbone, ResNetBackboneGN, DarkNetBackbone
 from math import sqrt
 import torch
@@ -116,7 +118,7 @@ dataset_base = Config({
     'valid_images': './data/coco/images/',
     'valid_info':   'path_to_annotation_file',
 
-    # Whether or not to load GT. If this is False, eval.py quantitative evaluation won't work.
+    # Whether or not to load GT. If this is False, evaluate.py quantitative evaluation won't work.
     'has_gt': True,
 
     # A list of names for each of you classes.
@@ -130,10 +132,10 @@ dataset_base = Config({
 
 babylocust_dataset = dataset_base.copy({
     'name': 'Baby Locust Dataset',
-    'train_info': './data/train_babylocust/annotations.json',
-    'valid_info': './data/valid_babylocust/annotations.json',
-    'train_images': './data/train_babylocust/',
-    'valid_images': './data/valid_babylocust/',
+    'train_info': 'C:/Users/raysu/analysis/animal_tracking/yolact/data/train_babylocust/annotations.json',
+    'valid_info': 'C:/Users/raysu/analysis/animal_tracking/yolact/data/valid_babylocust/annotations.json',
+    'train_images': 'C:/Users/raysu/analysis/animal_tracking/yolact/data/train_babylocust/',
+    'valid_images': 'C:/Users/raysu/analysis/animal_tracking/yolact/data/data/valid_babylocust/',
     'has_gt': True,
     'class_names': ('babylocust',
     )})
@@ -838,7 +840,21 @@ cfg = yolact_base_config.copy()
 def set_cfg(config_name:str):
     """ Sets the active config. Works even if cfg is already imported! """
     global cfg
-
+    # Hack to use external configuration file
+    if os.path.exists(config_name):
+        with open(config_name, 'r') as cfg_file:
+            config = yaml.safe_load(cfg_file)
+            base = config.pop('base', None)
+            if base is not None:
+                cfg.replace(eval(base))
+            dataset = config.pop('dataset')
+            for key, value in config.items():
+                cfg.__setattr__(key, value)
+            if 'mask_proto_debug' not in config:
+                cfg.mask_proto_debug = False
+            if dataset is not None:
+                cfg.dataset = dataset_base.copy(dataset)
+        return
     # Note this is not just an eval because I'm lazy, but also because it can
     # be used like ssd300_config.copy({'max_size': 400}) for extreme fine-tuning
     cfg.replace(eval(config_name))
