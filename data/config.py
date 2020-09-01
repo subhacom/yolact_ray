@@ -130,15 +130,6 @@ dataset_base = Config({
     'label_map': None
 })
 
-babylocust_dataset = dataset_base.copy({
-    'name': 'Baby Locust Dataset',
-    'train_info': 'C:/Users/raysu/analysis/animal_tracking/yolact/data/train_babylocust/annotations.json',
-    'valid_info': 'C:/Users/raysu/analysis/animal_tracking/yolact/data/valid_babylocust/annotations.json',
-    'train_images': 'C:/Users/raysu/analysis/animal_tracking/yolact/data/train_babylocust/',
-    'valid_images': 'C:/Users/raysu/analysis/animal_tracking/yolact/data/data/valid_babylocust/',
-    'has_gt': True,
-    'class_names': ('babylocust',
-    )})
     
 
 coco2014_dataset = dataset_base.copy({
@@ -816,21 +807,6 @@ yolact_plus_resnet50_config = yolact_plus_base_config.copy({
         'preapply_sqrt': False,
         'use_square_anchors': False,
     }),
-})
-
-
-# ----------------------- CUSTOM CONFIG ------------------------#
-babylocust_config = yolact_base_config.copy({
-    'name': 'babylocust_resnet101',
-    'dataset': babylocust_dataset,   #coco2017_dataset,
-    'num_classes': len(babylocust_dataset.class_names) + 1,   #len(coco2017_dataset.class_names) + 1,
-
-    # Image Size
-    'max_size': 550,
-    
-    # Training params
-    'lr_steps': (28000, 60000, 70000, 80000, 100000, 160000, 200000),
-    'max_iter': 240000,
 })
 
 
